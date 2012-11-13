@@ -1,4 +1,4 @@
 source :rubygems
 
-gem 'extensions/kernel'
+gem 'extensions'
 gem 'css_parser'
