@@ -1,5 +1,5 @@
 require 'rubygems'
-require 'css_parser'
+require_relative '../package/css_parser/lib/css_parser.rb'
 include CssParser
 
 module OptiCSS
@@ -53,7 +53,11 @@ module OptiCSS
 
         definition[:declarations] = Hash.new
         rule[:rules].instance_variable_get(:@declarations).each do |declaration|
-          definition[:declarations][declaration[0]] = declaration[1][:value]
+          definition[:declarations][declaration[0]] = [declaration[1][:value]]
+          while declaration[1][:previous]
+            declaration[1] = declaration[1][:previous]
+            definition[:declarations][declaration[0]].unshift declaration[1][:value]
+          end
         end
 
         @sheet[current_idx][:definitions].push definition

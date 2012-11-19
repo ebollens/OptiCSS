@@ -21,8 +21,10 @@ module OptiCSS
               selector_string = definition[:selectors].join(',')
 
               declarations_arr = []
-              definition[:declarations].each do |key, value|
-                declarations_arr.push "#{key}:#{value.strip}"
+              definition[:declarations].each do |key, values|
+                values.each do |value|
+                  declarations_arr.push "#{key}:#{value.strip}"
+                end
               end
 
               handle.write "#{selector_string}{#{declarations_arr.join(';')}}"

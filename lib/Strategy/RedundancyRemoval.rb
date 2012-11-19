@@ -36,7 +36,7 @@ module OptiCSS
                 if definitions[comp][:selectors].include? selector
                   
                   # For each declaration (property) in the definition
-                  definition[:declarations].each do |key,value|
+                  definition[:declarations].each do |key,values|
                     
                     # Skip if the property is not declared in the comparison
                     next unless definitions[comp][:declarations][key]
@@ -44,12 +44,30 @@ module OptiCSS
                     # Skip if property is an aggregate property
                     next if aggregate_properties.include? key
                     
-                    # Skip if any keyword in value is vendor-prefixed
-                    next if " #{definitions[comp][:declarations][key]}".match(/\s\-/)
-                    next if " #{definition[:declarations][key]}".match(/\s\-/)
+                    has_value = false
+                    values.each do |v|
+                      has_value = true unless v.match /\s\-/
+                    end
                     
-                    # Delete key
-                    definitions[comp][:declarations].delete key
+                    # Skip if all values contained are vendor-prefixed
+                    next unless has_value
+                    
+                    delete_values = []
+                    definitions[comp][:declarations][key].each_index do |idx|
+                      delete_values.push idx unless definitions[comp][:declarations][key][idx].match /\s\-/
+                    end
+                    
+                    # Sort indices from latter to former to make deleting safe
+                    delete_values.sort! {|x,y| y <=> x }
+                    
+                    # Delete all the indices that were flagged as redundant
+                    delete_values.each do |idx|
+                      definitions[comp][:declarations][key].delete_at idx
+                    end
+                    
+                    if definitions[comp][:declarations][key].length == 0
+                      definitions[comp][:declarations].delete key
+                    end
                     
                   end
                   

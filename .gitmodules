@@ -1,0 +1,3 @@
+[submodule "package/css_parser"]
+	path = package/css_parser
+	url = https://github.com/ebollens/css_parser.git
