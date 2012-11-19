@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'extensions/kernel'
+require 'pathname'
 require_relative 'Parser'
 
 module OptiCSS
@@ -26,7 +27,7 @@ module OptiCSS
     
     def create_strategy strategy_name
       
-      return false unless File.exists? "Strategy/#{strategy_name}.rb"
+      return false unless File.exists? "#{File.dirname(Pathname.new(__FILE__).realpath)}/Strategy/#{strategy_name}.rb"
       
       require_relative "Strategy/#{strategy_name}.rb"
       
