@@ -47,6 +47,12 @@ module OptiCSS
       
     end
     
+    def split_save filename
+      
+      strategy "SplitSave", :filename => filename
+      
+    end
+    
     def save file
       
       strategy "Save", :filename => file
