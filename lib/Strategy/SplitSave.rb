@@ -1,4 +1,5 @@
 require 'rubygems'
+require 'fileutils'
 require 'extensions/kernel' if defined?(require_relative).nil?
 require_relative 'Strategy'
 
@@ -52,10 +53,14 @@ module OptiCSS
         
         handle.close
         
-        File.open(properties[:filename], 'w') do |handle|
-          (1..file_counter).each do |i|
-            handle.write "@import \"#{File.basename(basename)}-#{i}.css\"; "
+        if file_counter > 1
+          File.open(properties[:filename], 'w') do |handle|
+            (1..file_counter).each do |i|
+              handle.write "@import \"#{File.basename(basename)}-#{i}.css\"; "
+            end
           end
+        else
+          FileUtils.mv "#{basename}-1.css", "#{basename}.css"
         end
         
         super properties
