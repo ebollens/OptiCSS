@@ -1,4 +1,5 @@
 require 'rubygems'
+require 'extensions/kernel' if defined?(require_relative).nil?
 require_relative '../package/css_parser/lib/css_parser.rb'
 include CssParser
 
