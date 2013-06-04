@@ -9,6 +9,12 @@ module OptiCSS
     class RedundancyRemoval < Strategy
       
       def execute properties
+                 
+        puts "WARNING: The RedundancyRemoval filter is currently non-operational"
+        
+        # Exit early because below code is non-optimal [TODO]
+        return super properties
+        
         
         # Several properties are aggregates that accept multiple values.
         # Duplicates of these should not be removed as redundant, because
