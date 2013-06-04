@@ -1,5 +1,5 @@
 require 'rubygems'
-require 'extensions/kernel'
+require 'extensions/kernel' if defined?(require_relative).nil?
 require_relative 'Strategy'
 
 module OptiCSS
@@ -16,83 +16,95 @@ module OptiCSS
         aggregate_properties = ['background', 'border', 'border-top',
                                 'border-right', 'border-bottom', 'border-left',
                                 'font', 'list-style', 'outline']
-        
-        # Loop though each media query to find redundant rules within the query
+                              
         @parser.each_media_query do |idx, media_query, definitions|
-      
-          current = definitions.length-1
-
-          # From the last definition to the first definition
-          while current >= 0
-
-            definition = definitions[current]
-
-            # For each selector in the definition
-            definition[:selectors].each do |selector|
-              
-              # Try to match it to other definitions earlier in the sheet
-              for comp in 0..(current-1) 
-                
-                if definitions[comp][:selectors].include? selector
-                  
-                  # For each declaration (property) in the definition
-                  definition[:declarations].each do |key,values|
+          
+          new_definitions = []
+          
+          current = 0
+          while current < definitions.length
                     
-                    # Skip if the property is not declared in the comparison
-                    next unless definitions[comp][:declarations][key]
-                    
-                    # Skip if property is an aggregate property
-                    next if aggregate_properties.include? key
-                    
-                    has_value = false
-                    values.each do |v|
-                      has_value = true unless v.match /\s\-/
-                    end
-                    
-                    # Skip if all values contained are vendor-prefixed
-                    next unless has_value
-                    
-                    delete_values = []
-                    definitions[comp][:declarations][key].each_index do |idx|
-                      delete_values.push idx unless definitions[comp][:declarations][key][idx].match /\s\-/
-                    end
-                    
-                    # Sort indices from latter to former to make deleting safe
-                    delete_values.sort! {|x,y| y <=> x }
-                    
-                    # Delete all the indices that were flagged as redundant
-                    delete_values.each do |idx|
-                      definitions[comp][:declarations][key].delete_at idx
-                    end
-                    
-                    if definitions[comp][:declarations][key].length == 0
-                      definitions[comp][:declarations].delete key
-                    end
-                    
+            # Skip if property is an aggregate property
+            if (definitions[current][:declarations].keys & aggregate_properties).length > 0
+              new_definitions.push(definitions[current])
+              current += 1
+              next
+            end
+            
+            adjacency_matrix = {}
+            definitions[current][:selectors].each do |selector|
+              adjacency_matrix[selector] = {}
+              definitions[current][:declarations].keys.each do |declaration|
+                adjacency_matrix[selector][declaration] = true
+              end
+            end
+            
+            ahead = current + 1
+            while ahead < definitions.length
+              intersected_selectors = definitions[current][:selectors] & definitions[ahead][:selectors]
+              if intersected_selectors.length > 0
+                intersected_declarations = definitions[current][:declarations].keys & definitions[ahead][:declarations].keys
+                intersected_declarations.clone.each do |declaration|
+                  is_vendor_prefix = false
+                  definitions[current][:declarations][declaration].each do |v|
+                    is_vendor_prefix = true if v.match /\s\-/
                   end
-                  
+                  intersected_declarations.delete declaration if is_vendor_prefix
                 end
-                
+                if intersected_declarations.length > 0
+                  intersected_selectors.each do |selector|
+                    intersected_declarations.each do |declaration|
+                      adjacency_matrix[selector][declaration] = false
+                    end
+                  end
+                end
               end
               
+              ahead += 1
+              
             end
-
-            new_definitions = []
             
-            definitions.each do |definition|
-              
-              new_definitions.push definition unless definition[:declarations].length == 0
-              
+            declarations_counter = {}
+            definitions[current][:declarations].keys.each do |declaration|
+              declarations_counter[declaration] = 0
             end
-
-            @parser.sheet[idx][:definitions] = new_definitions
-
-            current -= 1
-
+            adjacency_matrix.each do |selector,declarations|
+              declarations.each do |declaration, adjacent|
+                declarations_counter[declaration] += 1 if adjacent
+              end
+            end
+            
+            declaration, count = declarations_counter.max_by { |x,y| y }
+            while count and count > 0
+              new_selectors = []
+              new_declarations = {}
+              adjacency_matrix.each do |selector,declarations|
+                new_selectors.push selector if declarations[declaration]
+              end
+              definitions[current][:declarations].keys.each do |declaration|
+                match = true
+                new_selectors.each do |selector|
+                  match = false unless adjacency_matrix[selector][declaration]
+                end
+                next unless match
+                new_declarations[declaration] = definitions[current][:declarations][declaration]
+                declarations_counter[declaration] -= count
+              end
+              new_definitions.push({
+                :selectors => new_selectors,
+                :declarations => new_declarations
+              })
+              declaration, count = declarations_counter.max_by { |x,y| y }
+            end
+            
+            current += 1
+            
           end
-
+          
+          @parser.sheet[idx][:definitions] = new_definitions
+          
         end
-        
+                              
         super properties
         
       end
